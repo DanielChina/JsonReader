@@ -1,0 +1,23 @@
+table, th, td {
+  border: 1px solid black;
+  border-collapse: collapse;
+}
+th, td {
+  padding: 5px;
+}
+th {
+  text-align: left;
+}
+
+tab { margin-left: 30px; }
+
+.foldButton{
+    width:20px;
+    height:20px;
+    background-image: url("/static/library/minus16.svg");
+}
+.unfoldButton{
+    width:20px;
+    height:20px;
+    background-image: url("/static/library/add16.svg");
+}
