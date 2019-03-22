@@ -1,21 +1,13 @@
 $(document).ready(function(){
     let foldState=false;
     let jsonStr ='';
-    function addLoader(){
-        $('body').append('<div style="" id="loadingDiv"><div class="loader">Loading...</div></div>');
-    }
-    function removeLoader(){
-        $( "#loadingDiv" ).fadeOut(500, function() {
-        // fadeOut complete. Remove the loading div
-        $( "#loadingDiv" ).remove(); //makes page more lightweight
-        });
-    }
     $("#jsonFileRequest").click(requestJson);
     $("#formatJson").click({foldState:foldState},jsonProcess);
     function requestJson(){
         CommonUtils.makeHttpRequest('/jsonRequest',"",'POST').then(
         res=>{
             if(res!=null) {
+                alert("Success to load json file!");
                 console.log("Success to load json file!");
                 jsonStr = res.toString();
                 //$("#displayArea").html(jsonStr);
@@ -26,7 +18,6 @@ $(document).ready(function(){
         })
     }
     function jsonProcess(event){
-        //addLoader();
         let foldState=event.data.foldState;
         if(jsonStr.length==0) return;
         console.log("Start to process json file");
@@ -41,7 +32,6 @@ $(document).ready(function(){
         }else{
             console.log(result.msg);
         }
-        //removeLoader();
     }
 });
 
