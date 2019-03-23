@@ -1,34 +1,25 @@
 class JsonFormat{
-    static getCurlyBrace(foldState,isLeft,layNumber){
+    static getCurlyBrace(foldState,layNumber,currentChar){
         let curlyBrace = '';
         let currentLayerBlank='';
         for(let i=0;i<(layNumber-1);i++)
             currentLayerBlank+= '<tab></tab>';
-        if(foldState){
-            if(isLeft) {
-                curlyBrace = '<p>' + currentLayerBlank + '<Button class="fold"></Button>{</p>';
-            }
-            else {
-                curlyBrace = '<p>' + currentLayerBlank + '<Button class="fold"></Button>}</p>';
-            }
-        }else{
-            if(isLeft) {
-                curlyBrace = '<p>' + currentLayerBlank + '<Button class="unfold"></Button>{</p>';
-            }
-            else {
-                curlyBrace = '<p>' + currentLayerBlank + '<Button class="unfold"></Button>}</p>';
-            }
-        }
+        if(foldState)
+            curlyBrace = '<p>' + currentLayerBlank + '<Button class="fold"></Button>'+currentChar+'</p>';
+        else
+            curlyBrace = '<p>' + currentLayerBlank + '<Button class="unfold"></Button>'+currentChar+'</p>';
         return curlyBrace;
     }
     static formatDisplayJson(foldState,jsonStr,displayId){
-        let layerNumberList=[];
-        let currentLayerNumber=0;
+        let layerIndexList=[];
+        let currentLayerIndex=0;
         let elementId='';
+        //first subscript - layerIndex, second subscript -element Index in current layer
+        let elementsList=[];
         let newElement=null;
-        let keyIndex=0;
-        let valueIndex=0;
+        let keyValueIndex=0;
         let curlyBraceIndex=0;
+        let result=null;
 
         // let printerIndex=0;
         try {
@@ -39,134 +30,131 @@ class JsonFormat{
                 //     console.log("heart beat:",index);
                 //     printerIndex=0;
                 // }
+                let currentLayerBlank='';
                 let char = jsonStr.charAt(index);
                 switch (char) {
                     case '{':
-                        currentLayerNumber += 1;
-                        elementId = 'lCurlyBrace'+curlyBraceIndex.toString()+'In' + currentLayerNumber.toString();
-                        layerNumberList.push(currentLayerNumber);
-                        newElement = $(JsonFormat.getCurlyBrace(foldState, true, currentLayerNumber)).attr("id", elementId);
-                        $(displayId).append(newElement);
+                    case '[':
+                        currentLayerIndex += 1;
+                        layerIndexList.push(currentLayerIndex);
+                        JsonFormat.displayCurlyBrace(curlyBraceIndex,currentLayerIndex,foldState,displayId,char,'lCurlyBrace');
                         curlyBraceIndex++;
+                        result=JsonFormat.displayKeyValue(index,jsonStr,keyValueIndex,currentLayerIndex,curlyBraceIndex,displayId);
+                        keyValueIndex=result.keyValueIndex;
+                        index=result.index;
+                        newElement=result.newElement;
                         break;
                     case '}':
-                        elementId = 'rCurlyBrace'+curlyBraceIndex.toString()+'In' + currentLayerNumber.toString();
-                        newElement = $(JsonFormat.getCurlyBrace(foldState, false, currentLayerNumber)).attr("id", elementId);
-                        $(displayId).append(newElement);
-                        if (currentLayerNumber >= 1)
-                            currentLayerNumber -= 1;
+                    case ']':
+                        newElement=JsonFormat.displayCurlyBrace(curlyBraceIndex,currentLayerIndex,foldState,displayId,char,'rCurlyBrace');
+                        if (currentLayerIndex >= 1)
+                            currentLayerIndex -= 1;
                         curlyBraceIndex++;
-                        break;
-                    case '\"':
-                        let keyResult = JsonFormat.getKey(index, jsonStr);
-                        if (keyResult.end) {
-                            elementId = 'keyValuePair' + keyIndex.toString() + 'In' + currentLayerNumber.toString();
-                            newElement = $('<p></p>').attr('id', elementId);
-                            //all the key value pairs under the same curly brace have the same class attr.
-                            let className=JsonFormat.getCurrentKeyValueClassName(currentLayerNumber,curlyBraceIndex);
-                            if(className.length>0)
-                                newElement.addClass(className);
-                            else
-                                return {success: false, msg: "Failed to find right left curly brace!"};
-                            elementId = 'key' + keyIndex.toString() + 'In' + currentLayerNumber.toString();
-                            newElement.append($(JsonFormat.displayKey(keyResult.key, currentLayerNumber)).attr('id', elementId));
-                            $(displayId).append(newElement);
-                            keyIndex += 1;
-                            index += keyResult.key.length + 1;
-                        } else
-                            return {success: false, msg: "Failed to get key!"};
-                        break;
-                    case ':' :
-                        let valueResult = JsonFormat.getValue(':', index, jsonStr);
-                        if (valueResult.end) {
-                            elementId = 'value' + valueIndex.toString() + 'In' + currentLayerNumber.toString();
-                            index += valueResult.value.length;
-                            newElement.append($('<span>' + ':' + valueResult.value + '</span>').attr('id', elementId));
-                            valueIndex += 1;
-                        }
-                        else
-                            return {success: false, msg: "Failed to get value!"};
                         break;
                     case ',':
                         newElement.append('<span>,</span>');
+                        result=JsonFormat.displayKeyValue(index,jsonStr,keyValueIndex,currentLayerIndex,curlyBraceIndex,displayId);
+                        keyValueIndex=result.keyValueIndex;
+                        index=result.index;
+                        newElement=result.newElement;
                         break;
-
                 }
             }
         }catch(e){
             return {success:false, msg: e.toString()};
         };
-        let totalLayersNumber=Math.max(...layerNumberList);
+        let totalLayersNumber=Math.max(...layerIndexList);
         //key number = key Value Pairs Number
-        return {success:true,totalLayersNumber:totalLayersNumber,keyValuePairsNumber:keyIndex,
+        return {success:true,totalLayersNumber:totalLayersNumber,keyValuePairsNumber:keyValueIndex,
                  curlyBracesNumber:curlyBraceIndex};
     };
+    static displayCurlyBrace(curlyBraceIndex,currentLayerIndex,foldState,parentId,char,idPrefix){
+        let elementId = idPrefix+curlyBraceIndex.toString()+'In' + currentLayerIndex.toString();
+        let newElement = $(JsonFormat.getCurlyBrace(foldState,currentLayerIndex,char)).attr("id", elementId);
+        $(parentId).append(newElement);
+        return newElement;
+    }
+    static displayKeyValue(index,jsonStr,keyValueIndex,currentLayerIndex,curlyBraceIndex,parentId){
+        let elementId=null;
+        let currentLayerBlank='';
+        let newElement=null;
+        let result=JsonFormat.getKeyValue(index+1,jsonStr);
+        if(result.success && result.value.length!=0){
+            let elementId = 'keyValuePair' + keyValueIndex.toString() + 'In' + currentLayerIndex.toString();
+            for(let i=0;i<currentLayerIndex;i++)
+                currentLayerBlank+= '<tab></tab>';
+            newElement = $('<p></p>').append($(currentLayerBlank)).attr('id', elementId);
+            newElement.append(result.value);
+            //all the key value pairs under the same curly brace have the same class attr.
+            let className=JsonFormat.getCurrentKeyValueClassName(currentLayerIndex,curlyBraceIndex);
+            if(className.length>0)
+                newElement.addClass(className);
+            else
+                return {success: false, msg: "Failed to find right left curly brace!"};
+            $(parentId).append(newElement);
+            keyValueIndex += 1;
+        };
+        index += result.value.length;
+        return {newElement:newElement,keyValueIndex:keyValueIndex, index:index}
+    }
      //find the left curly brace including to the key value pair.
-    static getCurrentKeyValueClassName(currentLayerNumber,curlyBraceIndex){
+    static getCurrentKeyValueClassName(currentLayerIndex,curlyBraceIndex){
         for(let i=(curlyBraceIndex-1);i>=0;i--){
-            let curlyBraceId="#lCurlyBrace"+i.toString()+"In"+currentLayerNumber.toString();
+            let curlyBraceId="#lCurlyBrace"+i.toString()+"In"+currentLayerIndex.toString();
             if($(curlyBraceId).length>0){
                 return curlyBraceId.split("In")[0];
             }
         }
         return "";
     }
-    static getKey(index,jsonStr){
-        let key="";
-        let endFlag=false;
-        for(let i=(index+1);i<jsonStr.length;i++){
-            if(jsonStr.charAt(i) != '\"')
-                key+=jsonStr.charAt(i);
-            else {
-                endFlag = true;
-                break;
+    static getSubStrBetweenDoubleQuotation(index,str){
+        let startIndex=0,endIndex=0;
+        let substr="";
+        let doubleQuotationCount=0;
+        for(let i=index;i<str.length;i++){
+            if(str.charAt(i)=='\"' && doubleQuotationCount!=2)
+                doubleQuotationCount++;
+            if(doubleQuotationCount!=0){
+                substr += str.charAt(i);
+                if (doubleQuotationCount == 2)
+                    break;
             }
         }
-        if(endFlag)
-            return { end:true, key:key};
+        if(doubleQuotationCount==0)
+            return { success:true,value:null};
+        else if(doubleQuotationCount==2)
+            return { success:true, value: substr};
         else
-            return { end:false };
-    };
-    static getValue(startChar,startIndex,jsonStr){
-        let valueStr="";
-        let arrayEndFlag=true;
-        let doubleQuoteCount=0;
-        let doubleQuoteEndFlag=true;
-        let nestedCount=0;
-        for(let i=startIndex+1;i<jsonStr.length;i++){
-            if(jsonStr.charAt(i)=='\"' || !doubleQuoteEndFlag){
-                if(doubleQuoteCount==1) {
-                    doubleQuoteEndFlag = true;
-                }
-                else {
-                    doubleQuoteEndFlag=false;
-                    doubleQuoteCount++;
-                }
-            }
-            if(doubleQuoteEndFlag){
-                if(jsonStr.charAt(i)=='['){
-                    nestedCount++;
-                    arrayEndFlag=false;
-                }
-                else if((jsonStr.charAt(i)==']')) {
-                    nestedCount--;
-                    if(nestedCount==0)
-                        arrayEndFlag = true;
-                    else if(nestedCount<0)
-                        break;
-                }
-                if( arrayEndFlag && (jsonStr.charAt(i)=='{' || jsonStr.charAt(i)=='}' || jsonStr.charAt(i)==','))
-                    return { end:true, value: valueStr, endChar:jsonStr.charAt(i) };
-            }
-            valueStr+=jsonStr.charAt(i);
-        }
-        return {end: false};
+            return {success:false};
     }
-    static displayKey(key,layerNumber){
-        let currentLayerBlank='';
-        for(let i=0;i<layerNumber;i++)
-            currentLayerBlank+= '<tab></tab>';
-        return '<span>'+currentLayerBlank+'\"'+key+'\"'+'</span>';
+    static indentStr(str){
+        for(let i=0;i<str.length;i++){
+            if(str.charAt(i)!==' ' && str.charAt(i)!=='\r' && str.charAt(i)!=='\n')
+                break;
+        }
+        return str.substring(i);
+    }
+    static getKeyValue(index,str){
+        let startIndex=index;
+        let endIndex=index;
+        for(let i=index;i<str.length;i++){
+            switch(str.charAt(i)) {
+                case '[':
+                case '{':
+                case ',':
+                case ']':
+                case '}':
+                    return {success:true,value:str.substring(index,i)};
+                case '\"': //string value
+                    if(!JsonFormat.getSubStrBetweenDoubleQuotation(i,str).success)
+                        return {success:false};
+                    else{
+                        i+=JsonFormat.getSubStrBetweenDoubleQuotation(i,str).value.length-1;
+                        continue;
+                    }
+            }
+        }
+        return {success:false};
     }
     static foldStateShift(event){
         let currentCurlyBraceId=event.data.curlyBraceId;
@@ -200,23 +188,23 @@ class JsonFormat{
 
     static innerElementDisplayShift(jsonStatistic,currentLeftCurlyBraceId,foldAction){
         let currentKeyValuePairClass=currentLeftCurlyBraceId.split("In")[0];
-        let currentLayerNumber=parseInt(currentLeftCurlyBraceId.split("In")[1]);
+        let currentLayerIndex=parseInt(currentLeftCurlyBraceId.split("In")[1]);
         let totalLayersNumber=jsonStatistic.totalLayersNumber;
         let curlyBracesNumber=jsonStatistic.curlyBracesNumber;
         let keyValuePairsNumber=jsonStatistic.keyValuePairsNumber;
 
-        for(let i=currentLayerNumber;i<=totalLayersNumber;i++) {
+        for(let i=currentLayerIndex;i<=totalLayersNumber;i++) {
             for (let j = 0; j < keyValuePairsNumber; j++) {
                 let keyValueId = '#keyValuePair' + j.toString() + 'In' + i.toString();
-                if( (i==currentLayerNumber && $(keyValueId).length > 0 && $(keyValueId).attr("class")==currentKeyValuePairClass)
-                     ||(i!=currentLayerNumber && $(keyValueId).length > 0)){
+                if( (i==currentLayerIndex && $(keyValueId).length > 0 && $(keyValueId).attr("class")==currentKeyValuePairClass)
+                     ||(i!=currentLayerIndex && $(keyValueId).length > 0)){
                     if (foldAction)
                         $(keyValueId).hide();
                     else
                         $(keyValueId).show();
                 }
             }
-            if(i!=currentLayerNumber) {
+            if(i!=currentLayerIndex) {
                 let prefix=['#lCurlyBrace','#rCurlyBrace'];
                 for(let m=0;m<curlyBracesNumber;m++ ){
                     for(let k=0;k<2;k++){
@@ -239,13 +227,13 @@ class JsonFormat{
     }
     static findPartnerCurlyBraceId(currentCurlyBraceId,curlyBracesNumber){
         let prefix=null;
-        let currentLayerNumberStr=currentCurlyBraceId.split("In")[1];
+        let currentLayerIndexStr=currentCurlyBraceId.split("In")[1];
         let currentCurlyBraceIndex=parseInt(currentCurlyBraceId.split("In")[0].substring(('#lCurlyBrace').length));
         let partnerCurlyBraceId=null;
         if(currentCurlyBraceId.charAt(1)=='l') {
             prefix = '#rCurlyBrace';
             for (let i = currentCurlyBraceIndex+1; i < curlyBracesNumber; i++) {
-                partnerCurlyBraceId = prefix + i.toString() + "In" + currentLayerNumberStr;
+                partnerCurlyBraceId = prefix + i.toString() + "In" + currentLayerIndexStr;
                 if ($(partnerCurlyBraceId).length > 0)
                     return partnerCurlyBraceId;
             }
@@ -253,7 +241,7 @@ class JsonFormat{
         else {
             prefix = '#lCurlyBrace';
             for (let i = currentCurlyBraceIndex-1; i>=0; i--) {
-                partnerCurlyBraceId = prefix + i.toString() + "In" + currentLayerNumberStr;
+                partnerCurlyBraceId = prefix + i.toString() + "In" + currentLayerIndexStr;
                 if ($(partnerCurlyBraceId).length > 0)
                     return partnerCurlyBraceId;
             }

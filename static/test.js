@@ -2,7 +2,7 @@ $(document).ready(function(){
     let foldState=false;
     let jsonStr ='';
     $("#jsonFileRequest").click(requestJson);
-    $("#formatJson").click({foldState:foldState},jsonProcess);
+    $("#formatJson").click({foldState:foldState},jsonFormatProcess);
     function requestJson(){
         CommonUtils.makeHttpRequest('/jsonRequest',"",'POST').then(
         res=>{
@@ -10,14 +10,14 @@ $(document).ready(function(){
                 alert("Success to load json file!");
                 console.log("Success to load json file!");
                 jsonStr = res.toString();
-                //$("#displayArea").html(jsonStr);
+                $("#displayArea").html(jsonStr);
                 console.log("Success to display json string!");
            }else{
                 $("#displayArea").html('Failed to load json file');
            }
         })
     }
-    function jsonProcess(event){
+    function jsonFormatProcess(event){
         let foldState=event.data.foldState;
         if(jsonStr.length==0) return;
         console.log("Start to process json file");
@@ -26,7 +26,6 @@ $(document).ready(function(){
             console.log("Success to format");
             $("#totalLayersNumber").html(result.totalLayersNumber.toString());
             console.log("totalLayersNumber is ",result.totalLayersNumber );
-            console.log("keyValuePairsNumber is ",result.keyValuePairsNumber );
             JsonFormat.appendEvent(result);
             console.log("Success to add events response");
         }else{
