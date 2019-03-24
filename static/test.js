@@ -2,35 +2,47 @@ $(document).ready(function(){
     let foldState=false;
     let jsonStr ='';
     $("#jsonFileRequest").click(requestJson);
-    $("#formatJson").click({foldState:foldState},jsonFormatProcess);
+    $("#compactJson").click(compactAndSaveJson);
+    $("#formatJson").click(jsonFormatProcess);
     function requestJson(){
         CommonUtils.makeHttpRequest('/jsonRequest',"",'POST').then(
         res=>{
-            if(res!=null) {
+            if(res.success) {
                 alert("Success to load json file!");
-                console.log("Success to load json file!");
-                jsonStr = res.toString();
+                jsonStr = res.data.toString();
                 $("#displayArea").html(jsonStr);
-                console.log("Success to display json string!");
            }else{
-                $("#displayArea").html('Failed to load json file');
+                alert(res.msg);
            }
         })
-    }
-    function jsonFormatProcess(event){
-        let foldState=event.data.foldState;
-        if(jsonStr.length==0) return;
-        console.log("Start to process json file");
-        let result=JsonFormat.formatDisplayJson(foldState,jsonStr,"#displayAfterFormat");
-        if(result.success) {
-            console.log("Success to format");
-            $("#totalLayersNumber").html(result.totalLayersNumber.toString());
-            console.log("totalLayersNumber is ",result.totalLayersNumber );
-            JsonFormat.appendEvent(result);
-            console.log("Success to add events response");
-        }else{
-            console.log(result.msg);
+    };
+    function compactAndSaveJson(){
+        if(jsonStr.length==0)
+            return alert("Fail to load json string!");
+        let compact=JsonFormat.compactJsonStr(jsonStr);
+        if(compact.success){
+            let data=JSON.stringify({data:compact.str});
+            CommonUtils.makeHttpRequest('/jsonCover',data,'POST').then(
+                res=>alert(res.msg)
+            );
         }
+    }
+    function jsonFormatProcess(){
+        if(jsonStr.length==0)
+            return alert("Fail to load json string");
+        $("#displayAfterFormat").remove();
+        $("body").append($('<div id="displayAfterFormat"></div>'));
+        let compact=JsonFormat.compactJsonStr(jsonStr);
+        if(compact.success){
+            let result=JsonFormat.formatDisplayJson(foldState,compact.str,"#displayAfterFormat");
+            if(result.success) {
+                alert("Success to format json file!");
+                $("#totalLayersNumber").html(result.totalLayersNumber.toString());
+                JsonFormat.appendEvent(result);
+            }else
+                alert(result.msg);
+        }else
+            return alert("Fail to compact json file!");
     }
 });
 

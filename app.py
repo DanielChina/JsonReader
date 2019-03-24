@@ -1,4 +1,4 @@
-from flask import Flask,render_template, jsonify
+from flask import Flask,render_template, jsonify,request
 
 app = Flask(__name__)
 
@@ -14,11 +14,22 @@ def requestJson():
         fp=open('E:\\aa.json','r')
         data=fp.read()
         fp.close()
+        if(len(data)==0):
+            return jsonify({"success":False,"msg":"Json file length is zero!" })
+        return jsonify({"success":True,"data":data})
     except:
-        data=''
-        print("Failed to open json file!")
-    return jsonify(data)
+        return jsonify({"success":False,"msg":"Failed to open json file!"})
 
+@app.route('/jsonCover', methods=['POST'])
+def coverJsonFile():
+    data=request.json;
+    try:
+        fp=open('E:\\aa.json','w')
+        fp.write(data['data'])
+        fp.close()
+        return jsonify({"msg":"Success to compact json file!"})
+    except:
+        return jsonify({"msg":"Fail to open json file!"})
 
 if __name__ == '__main__':
     app.run()

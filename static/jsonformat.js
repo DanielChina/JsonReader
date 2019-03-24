@@ -10,6 +10,23 @@ class JsonFormat{
             curlyBrace = '<p>' + currentLayerBlank + '<Button class="unfold"></Button>'+currentChar+'</p>';
         return curlyBrace;
     }
+    static compactJsonStr(str){
+        let strAfterCompact='';
+        for(let i=0;i<str.length;i++) {
+            if (str.charAt(i) == '\"') {
+                let result = JsonFormat.getSubStrBetweenDoubleQuotation(i, str);
+                if (result.success) {
+                    strAfterCompact += result.value;
+                    i += result.value.length - 1;
+                } else
+                    return {success:false};
+            } else if (str.charAt(i) == ' ' || str.charAt(i) == '\r' || str.charAt(i) == '\n')
+                continue;
+            else
+                strAfterCompact += str.charAt(i);
+        }
+        return {success:true,str:strAfterCompact};
+    }
     static formatDisplayJson(foldState,jsonStr,displayId){
         let layerIndexList=[];
         let currentLayerIndex=0;
@@ -83,7 +100,7 @@ class JsonFormat{
             let elementId = 'keyValuePair' + keyValueIndex.toString() + 'In' + currentLayerIndex.toString();
             for(let i=0;i<currentLayerIndex;i++)
                 currentLayerBlank+= '<tab></tab>';
-            newElement = $('<p></p>').append($(currentLayerBlank)).attr('id', elementId);
+            newElement = $('<p></p>').append(currentLayerBlank).attr('id', elementId);
             newElement.append(result.value);
             //all the key value pairs under the same curly brace have the same class attr.
             let className=JsonFormat.getCurrentKeyValueClassName(currentLayerIndex,curlyBraceIndex);
@@ -126,13 +143,6 @@ class JsonFormat{
             return { success:true, value: substr};
         else
             return {success:false};
-    }
-    static indentStr(str){
-        for(let i=0;i<str.length;i++){
-            if(str.charAt(i)!==' ' && str.charAt(i)!=='\r' && str.charAt(i)!=='\n')
-                break;
-        }
-        return str.substring(i);
     }
     static getKeyValue(index,str){
         let startIndex=index;
