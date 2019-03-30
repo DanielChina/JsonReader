@@ -1,11 +1,14 @@
 $(document).ready(function(){
     let foldState=false;
     let jsonStr ='';
+    let filePath='';
     $("#jsonFileRequest").click(requestJson);
     $("#compactJson").click(compactAndSaveJson);
     $("#formatJson").click(jsonFormatProcess);
+
     function requestJson(){
-        CommonUtils.makeHttpRequest('/jsonRequest',"",'POST').then(
+        filePath=$("#filePathInput").val();
+        CommonUtils.makeHttpRequest('/jsonRequest',{path:filePath},'POST').then(
         res=>{
             if(res.success) {
                 alert("Success to load json file!");
@@ -21,20 +24,21 @@ $(document).ready(function(){
             return alert("Fail to load json string!");
         let compact=JsonFormat.compactJsonStr(jsonStr);
         if(compact.success){
-            let data=JSON.stringify({data:compact.str});
+            let data={data:compact.str,path:filePath};
             CommonUtils.makeHttpRequest('/jsonCover',data,'POST').then(
                 res=>alert(res.msg)
             );
         }
     }
     function jsonFormatProcess(){
+        let arrayExpandedFlag=!($("#arrayExpandedFlag").is(":checked"));
         if(jsonStr.length==0)
             return alert("Fail to load json string");
         $("#displayAfterFormat").remove();
         $("body").append($('<div id="displayAfterFormat"></div>'));
         let compact=JsonFormat.compactJsonStr(jsonStr);
         if(compact.success){
-            let result=JsonFormat.formatDisplayJson(foldState,compact.str,"#displayAfterFormat");
+            let result=JsonFormat.formatDisplayJson(arrayExpandedFlag,foldState,compact.str,"#displayAfterFormat");
             if(result.success) {
                 alert("Success to format json file!");
                 $("#totalLayersNumber").html(result.totalLayersNumber.toString());

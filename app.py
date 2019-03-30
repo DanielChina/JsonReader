@@ -10,8 +10,9 @@ def hello_world():
 
 @app.route('/jsonRequest', methods=['POST'])
 def requestJson():
+    data=request.json;
     try:
-        fp=open('E:\\aa.json','r')
+        fp=open(data['path'],'r')
         data=fp.read()
         fp.close()
         if(len(data)==0):
@@ -24,7 +25,7 @@ def requestJson():
 def coverJsonFile():
     data=request.json;
     try:
-        fp=open('E:\\aa.json','w')
+        fp=open(data['path'],'w')
         fp.write(data['data'])
         fp.close()
         return jsonify({"msg":"Success to compact json file!"})

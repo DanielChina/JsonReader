@@ -3,7 +3,7 @@ class CommonUtils{
         return $.ajax({
             type:type,
             url:url,
-            data:data,
+            data:JSON.stringify(data),
             contentType: 'application/json',
             dataType:'json'});
     }

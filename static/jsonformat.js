@@ -27,7 +27,7 @@ class JsonFormat{
         }
         return {success:true,str:strAfterCompact};
     }
-    static formatDisplayJson(foldState,jsonStr,displayId){
+    static formatDisplayJson(arrayExpandedFlag,foldState,jsonStr,displayId){
         let layerIndexList=[];
         let currentLayerIndex=0;
         let elementId='';
@@ -49,33 +49,62 @@ class JsonFormat{
                 // }
                 let currentLayerBlank='';
                 let char = jsonStr.charAt(index);
-                switch (char) {
-                    case '{':
-                    case '[':
-                        currentLayerIndex += 1;
-                        layerIndexList.push(currentLayerIndex);
-                        JsonFormat.displayCurlyBrace(curlyBraceIndex,currentLayerIndex,foldState,displayId,char,'lCurlyBrace');
-                        curlyBraceIndex++;
-                        result=JsonFormat.displayKeyValue(index,jsonStr,keyValueIndex,currentLayerIndex,curlyBraceIndex,displayId);
-                        keyValueIndex=result.keyValueIndex;
-                        index=result.index;
-                        newElement=result.newElement;
-                        break;
-                    case '}':
-                    case ']':
-                        newElement=JsonFormat.displayCurlyBrace(curlyBraceIndex,currentLayerIndex,foldState,displayId,char,'rCurlyBrace');
-                        if (currentLayerIndex >= 1)
-                            currentLayerIndex -= 1;
-                        curlyBraceIndex++;
-                        break;
-                    case ',':
-                        newElement.append('<span>,</span>');
-                        result=JsonFormat.displayKeyValue(index,jsonStr,keyValueIndex,currentLayerIndex,curlyBraceIndex,displayId);
-                        keyValueIndex=result.keyValueIndex;
-                        index=result.index;
-                        newElement=result.newElement;
-                        break;
+                if(arrayExpandedFlag){
+                    switch (char) {
+                        case '{':
+                        case '[':
+                            currentLayerIndex += 1;
+                            layerIndexList.push(currentLayerIndex);
+                            JsonFormat.displayCurlyBrace(curlyBraceIndex,currentLayerIndex,foldState,displayId,char,'lCurlyBrace');
+                            curlyBraceIndex++;
+                            result=JsonFormat.displayKeyValue(arrayExpandedFlag,index,jsonStr,keyValueIndex,currentLayerIndex,curlyBraceIndex,displayId);
+                            keyValueIndex=result.keyValueIndex;
+                            index=result.index;
+                            newElement=result.newElement;
+                            break;
+                        case '}':
+                        case ']':
+                            newElement=JsonFormat.displayCurlyBrace(curlyBraceIndex,currentLayerIndex,foldState,displayId,char,'rCurlyBrace');
+                            if (currentLayerIndex >= 1)
+                                currentLayerIndex -= 1;
+                            curlyBraceIndex++;
+                            break;
+                        case ',':
+                            newElement.append('<span>,</span>');
+                            result=JsonFormat.displayKeyValue(arrayExpandedFlag,index,jsonStr,keyValueIndex,currentLayerIndex,curlyBraceIndex,displayId);
+                            keyValueIndex=result.keyValueIndex;
+                            index=result.index;
+                            newElement=result.newElement;
+                            break;
+                    }
+                }else{
+                    switch (char) {
+                        case '{':
+                            currentLayerIndex += 1;
+                            layerIndexList.push(currentLayerIndex);
+                            JsonFormat.displayCurlyBrace(curlyBraceIndex,currentLayerIndex,foldState,displayId,char,'lCurlyBrace');
+                            curlyBraceIndex++;
+                            result=JsonFormat.displayKeyValue(arrayExpandedFlag,index,jsonStr,keyValueIndex,currentLayerIndex,curlyBraceIndex,displayId);
+                            keyValueIndex=result.keyValueIndex;
+                            index=result.index;
+                            newElement=result.newElement;
+                            break;
+                        case '}':
+                            newElement=JsonFormat.displayCurlyBrace(curlyBraceIndex,currentLayerIndex,foldState,displayId,char,'rCurlyBrace');
+                            if (currentLayerIndex >= 1)
+                                currentLayerIndex -= 1;
+                            curlyBraceIndex++;
+                            break;
+                        case ',':
+                            newElement.append('<span>,</span>');
+                            result=JsonFormat.displayKeyValue(arrayExpandedFlag,index,jsonStr,keyValueIndex,currentLayerIndex,curlyBraceIndex,displayId);
+                            keyValueIndex=result.keyValueIndex;
+                            index=result.index;
+                            newElement=result.newElement;
+                            break;
+                    }
                 }
+
             }
         }catch(e){
             return {success:false, msg: e.toString()};
@@ -91,11 +120,11 @@ class JsonFormat{
         $(parentId).append(newElement);
         return newElement;
     }
-    static displayKeyValue(index,jsonStr,keyValueIndex,currentLayerIndex,curlyBraceIndex,parentId){
+    static displayKeyValue(arrayExpandedFlag,index,jsonStr,keyValueIndex,currentLayerIndex,curlyBraceIndex,parentId){
         let elementId=null;
         let currentLayerBlank='';
         let newElement=null;
-        let result=JsonFormat.getKeyValue(index+1,jsonStr);
+        let result=JsonFormat.getKeyValue(arrayExpandedFlag,index+1,jsonStr);
         if(result.success && result.value.length!=0){
             let elementId = 'keyValuePair' + keyValueIndex.toString() + 'In' + currentLayerIndex.toString();
             for(let i=0;i<currentLayerIndex;i++)
@@ -144,26 +173,67 @@ class JsonFormat{
         else
             return {success:false};
     }
-    static getKeyValue(index,str){
+
+    static getSubStrBetweenSquareBracket(index,str){
+        let substr="";
+        let squareBracketNumber=0;
+        for(let i=index;i<str.length;i++){
+            if(str.charAt(i)=='[') {
+                squareBracketNumber++;
+            }
+            else if(str.charAt(i)==']')
+                squareBracketNumber--;
+            substr+=str.charAt(i);
+            if(squareBracketNumber==0)
+                return { success:true, value: substr};
+        }
+        return {success:false};
+    }
+    static getKeyValue(arrayExpandedFlag,index,str){
         let startIndex=index;
         let endIndex=index;
-        for(let i=index;i<str.length;i++){
-            switch(str.charAt(i)) {
-                case '[':
-                case '{':
-                case ',':
-                case ']':
-                case '}':
-                    return {success:true,value:str.substring(index,i)};
-                case '\"': //string value
-                    if(!JsonFormat.getSubStrBetweenDoubleQuotation(i,str).success)
-                        return {success:false};
-                    else{
-                        i+=JsonFormat.getSubStrBetweenDoubleQuotation(i,str).value.length-1;
-                        continue;
-                    }
+        if(arrayExpandedFlag){
+            for(let i=index;i<str.length;i++){
+                switch(str.charAt(i)) {
+                    case '[':
+                    case '{':
+                    case ',':
+                    case ']':
+                    case '}':
+                        return {success:true,value:str.substring(index,i)};
+                    case '\"': //string value
+                        if(!JsonFormat.getSubStrBetweenDoubleQuotation(i,str).success)
+                            return {success:false};
+                        else{
+                            i+=JsonFormat.getSubStrBetweenDoubleQuotation(i,str).value.length-1;
+                            continue;
+                        }
+                }
+            }
+        }else{
+            for(let i=index;i<str.length;i++){
+                switch(str.charAt(i)) {
+                    case '{':
+                    case ',':
+                    case '}':
+                        return {success:true,value:str.substring(index,i)};
+                    case '\"': //string value
+                        if(!JsonFormat.getSubStrBetweenDoubleQuotation(i,str).success)
+                            return {success:false};
+                        else{
+                            i+=JsonFormat.getSubStrBetweenDoubleQuotation(i,str).value.length-1;
+                            continue;
+                        }
+                    case '[':
+                        let result=JsonFormat.getSubStrBetweenSquareBracket(i,str);
+                        if(!result.success)
+                            return {success:false};
+                        else
+                            i+=result.value.length-1;
+                }
             }
         }
+
         return {success:false};
     }
     static foldStateShift(event){

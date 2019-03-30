@@ -4,12 +4,13 @@
     <meta charset="UTF-8">
     <title>Test</title>
 </head>
-<body>
-<button id="jsonFileRequest">Fetch json file</button>
+<body style="margin-left: 20px;margin-top: 20px">
+<p><input id="filePathInput" placeholder="input json file path"><button id="jsonFileRequest">Load json file</button></p>
+
 <h4>Original json file display:</h4>
 <p id="displayArea"></p>
 <p><button id="compactJson">Compact json file</button></p>
-<p><button id="formatJson">Format json file</button></p>
+<p><input type="checkbox" id="arrayExpandedFlag">Do not expand array(more than 2M json file suggested)</input><button id="formatJson">Format json file</button></p>
 <h4>Easy-Read json file display:</h4>
 <p>Total Layers Number:<span id="totalLayersNumber"></span></p>
 <div id="displayAfterFormat"></div>
